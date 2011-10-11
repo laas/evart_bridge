@@ -1,0 +1,29 @@
+<package>
+  <description brief="EVaRT node">
+
+    EVa Real-Time Software(tm) - EVaRT(tm) - provides a user with a
+    simple and powerful interface to the Motion Analysis(tm) motion
+    capture hardware.
+
+    This package forwards data computed by the EvaRT software as a ROS
+    topic.
+
+  </description>
+  <author>Thomas Moulard/thomas.moulard@gmail.com</author>
+  <license>BSD</license>
+  <review status="experimental" notes=""/>
+  <url>http://ros.org/wiki/evart_ros</url>
+
+  <versioncontrol type="git" url="git://github.com/laas/evart_ros.git"/>
+
+  <export>
+    <rosdoc config="rosdoc.yaml" />
+  </export>
+
+  <depend package="std_msgs"/>
+  <depend package="roscpp"/>
+  <depend package="geometry_msgs"/>
+  <depend package="bullet"/>
+  <depend package="evart-client"/>
+  <rosdep name="boost"/>
+</package>
