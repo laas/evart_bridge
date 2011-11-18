@@ -254,7 +254,8 @@ Evart::spin()
 	{
 	  BOOST_FOREACH (TrackerShPtr tracker, trackers_)
 	    for (unsigned i = 0; i < msg.body_segments.nsegments; ++i)
-	      if (tracker->segmentId () == i)
+	      if (tracker->bodyId () == msg.body_segments.index
+		  && tracker->segmentId () == i)
 		tracker->callback (msg.body_segments);
 	}
       ros::spinOnce();

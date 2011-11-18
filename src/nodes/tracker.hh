@@ -32,6 +32,11 @@ namespace evart
       return segmentId_;
     }
 
+    unsigned bodyId () const
+    {
+      return bodyId_;
+    }
+
     const std::string& objectName () const
     {
       return objectName_;
