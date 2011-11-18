@@ -4,6 +4,6 @@ lib/
 msg/lisp/
 msg_gen/
 src/lisp/
-src/evart_ros/
+src/evart_bridge/
 srv/lisp/
 srv_gen/
