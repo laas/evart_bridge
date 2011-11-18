@@ -111,10 +111,14 @@ namespace evart
     t->transform.translation.z = msg.segments[segmentId_].pos[2] / 1000.;
 
     // Convert euler angles to quaternion and convert to SI.
+    //
+    // WARNING: this makes the assumption that the rotation order is
+    // the default one (i.e. XYX) in Cortex. If you change the
+    // rotation order, this will not work.
     btQuaternion q;
-    q.setEuler(msg.segments[segmentId_].rot[2] * M_PI / 180.,
-	       msg.segments[segmentId_].rot[1] * M_PI / 180.,
-	       msg.segments[segmentId_].rot[0] * M_PI / 180.);
+    q.setRPY(msg.segments[segmentId_].rot[0] * M_PI / 180.,
+	     msg.segments[segmentId_].rot[1] * M_PI / 180.,
+	     msg.segments[segmentId_].rot[2] * M_PI / 180.);
     t->transform.rotation.x = q.x();
     t->transform.rotation.y = q.y();
     t->transform.rotation.z = q.z();
