@@ -10,8 +10,8 @@
 
 # include "tracker.hh"
 
-# include "evart_ros/List.h"
-# include "evart_ros/TrackSegment.h"
+# include "evart_bridge/List.h"
+# include "evart_bridge/TrackSegment.h"
 
 namespace evart
 {
@@ -23,10 +23,10 @@ namespace evart
 
     void spin();
 
-    bool trackSegments(evart_ros::TrackSegment::Request& req,
-		       evart_ros::TrackSegment::Response& res);
-    bool listSegments(evart_ros::List::Request& req,
-		      evart_ros::List::Response& res);
+    bool trackSegments(evart_bridge::TrackSegment::Request& req,
+		       evart_bridge::TrackSegment::Response& res);
+    bool listSegments(evart_bridge::List::Request& req,
+		      evart_bridge::List::Response& res);
 
   private:
     ros::NodeHandle nodeHandle_;

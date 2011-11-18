@@ -39,7 +39,7 @@ namespace evart
     evas_setport(evartPort_);
 
     typedef boost::function<bool
-      (evart_ros::List::Request&, evart_ros::List::Response&)> listCallback_t;
+      (evart_bridge::List::Request&, evart_bridge::List::Response&)> listCallback_t;
 
     listCallback_t listCallback =
       boost::bind(&Evart::listSegments, this, _1, _2);
@@ -47,8 +47,8 @@ namespace evart
 						    listCallback);
 
     typedef boost::function<
-    bool (evart_ros::TrackSegment::Request&,
-	  evart_ros::TrackSegment::Response&)> trackSegmentCallback_t;
+    bool (evart_bridge::TrackSegment::Request&,
+	  evart_bridge::TrackSegment::Response&)> trackSegmentCallback_t;
 
     trackSegmentCallback_t trackSegmentsCallback =
       boost::bind(&Evart::trackSegments, this, _1, _2);
@@ -60,8 +60,8 @@ namespace evart
   {}
 
 bool
-Evart::trackSegments(evart_ros::TrackSegment::Request& req,
-		     evart_ros::TrackSegment::Response& res)
+Evart::trackSegments(evart_bridge::TrackSegment::Request& req,
+		     evart_bridge::TrackSegment::Response& res)
 {
 
 
@@ -115,8 +115,8 @@ Evart::trackSegments(evart_ros::TrackSegment::Request& req,
 }
 
 bool
-Evart::listSegments(evart_ros::List::Request& req,
-		    evart_ros::List::Response& res)
+Evart::listSegments(evart_bridge::List::Request& req,
+		    evart_bridge::List::Response& res)
 {
   const evas_body_list_t* bodies = evas_body_list();
   if (!bodies)
@@ -125,9 +125,9 @@ Evart::listSegments(evart_ros::List::Request& req,
       return false;
     }
 
-  evart_ros::Body bodyMsg;
-  evart_ros::Segment segmentMsg;
-  evart_ros::Dof dofMsg;
+  evart_bridge::Body bodyMsg;
+  evart_bridge::Segment segmentMsg;
+  evart_bridge::Dof dofMsg;
 
   for (uint32_t body = 0; body < bodies->nbodies; ++body)
     {

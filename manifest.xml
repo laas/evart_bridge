@@ -12,9 +12,9 @@
   <author>Thomas Moulard/thomas.moulard@gmail.com</author>
   <license>BSD</license>
   <review status="unreviewed" notes=""/>
-  <url>http://ros.org/wiki/evart_ros</url>
+  <url>http://ros.org/wiki/evart_bridge</url>
 
-  <versioncontrol type="git" url="git://github.com/laas/evart_ros.git"/>
+  <versioncontrol type="git" url="git://github.com/laas/evart_bridge.git"/>
 
   <export>
     <rosdoc config="rosdoc.yaml" />
