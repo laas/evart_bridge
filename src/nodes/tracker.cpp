@@ -55,7 +55,9 @@ namespace evart
 		   const std::string& segmentName,
 		   const std::string& topicName,
 		   const std::string& referenceFrameName,
-		   const std::string& childFrameName)
+		   const std::string& childFrameName,
+		   boost::optional<tf::TransformBroadcaster&>
+		   transformBroadcaster)
     : publisher_(),
       seq_(0),
       objectName_(objectName),
@@ -63,16 +65,21 @@ namespace evart
       referenceFrameName_(referenceFrameName),
       childFrameName_(childFrameName),
       bodyId_(getBodyIdFromName(objectName)),
-      segmentId_(getSegmentIdFromName (bodyId_, segmentName))
+      segmentId_(getSegmentIdFromName (bodyId_, segmentName)),
+      transformBroadcaster_ (transformBroadcaster)
   {
     publisher_ =
       nh.advertise<geometry_msgs::TransformStamped>(topicName, queueSize);
 
     evas_body_segments(bodyId_, EVAS_ON);
+    ROS_DEBUG_STREAM
+      ("starting tracker for " << objectName_ << ":" << segmentName_);
   }
 
   Tracker::~Tracker()
   {
+    ROS_DEBUG_STREAM
+      ("stopping tracker for " << objectName_ << ":" << segmentName_);
     evas_body_segments(bodyId_, EVAS_OFF);
   }
 
@@ -80,7 +87,11 @@ namespace evart
   Tracker::callback(const evas_body_segments_t& msg)
   {
     if (msg.segments[segmentId_].pos[0] == EVAS_EMPTY)
-      return; // No data.
+      {
+	ROS_INFO_STREAM_THROTTLE
+	  (5, "no data for " << objectName_ << ":" << segmentName_);
+	return; // No data.
+      }
     if (msg.nsegments <= segmentId_)
       throw std::runtime_error("invalid segment id");
 
@@ -94,18 +105,42 @@ namespace evart
 
     t->child_frame_id = childFrameName_;
 
-    t->transform.translation.x = msg.segments[segmentId_].pos[0];
-    t->transform.translation.y = msg.segments[segmentId_].pos[1];
-    t->transform.translation.z = msg.segments[segmentId_].pos[2];
+    // Copy translation and convert to SI.
+    t->transform.translation.x = msg.segments[segmentId_].pos[0] / 1000.;
+    t->transform.translation.y = msg.segments[segmentId_].pos[1] / 1000.;
+    t->transform.translation.z = msg.segments[segmentId_].pos[2] / 1000.;
 
+    // Convert euler angles to quaternion and convert to SI.
     btQuaternion q;
-    q.setEuler(msg.segments[segmentId_].rot[2],
-	       msg.segments[segmentId_].rot[1],
-	       msg.segments[segmentId_].rot[0]);
+    q.setEuler(msg.segments[segmentId_].rot[2] * M_PI / 180.,
+	       msg.segments[segmentId_].rot[1] * M_PI / 180.,
+	       msg.segments[segmentId_].rot[0] * M_PI / 180.);
     t->transform.rotation.x = q.x();
     t->transform.rotation.y = q.y();
     t->transform.rotation.z = q.z();
     t->transform.rotation.w = q.w();
+
+    // Tf
+    if (transformBroadcaster_)
+      {
+	tf::Transform transform;
+	transform.setOrigin
+	  (tf::Vector3(t->transform.translation.x,
+		       t->transform.translation.y,
+		       t->transform.translation.z));
+	transform.setRotation
+	  (tf::Quaternion
+	   (t->transform.rotation.x,
+	    t->transform.rotation.y,
+	    t->transform.rotation.z,
+	    t->transform.rotation.w));
+	transformBroadcaster_->sendTransform
+	  (tf::StampedTransform
+	   (transform,
+	    t->header.stamp,
+	    t->header.frame_id,
+	    childFrameName_));
+      }
 
     publisher_.publish (t);
   }

@@ -1,8 +1,10 @@
 #ifndef EVART_ROS_TRACKER_HH
 # define EVART_ROS_TRACKER_HH
 # include <string>
+# include <boost/optional.hpp>
 # include <boost/shared_ptr.hpp>
 # include <ros/ros.h>
+# include <tf/transform_broadcaster.h>
 
 # include <evart-client.h>
 
@@ -18,7 +20,9 @@ namespace evart
 		     const std::string& segmentName,
 		     const std::string& topicName,
 		     const std::string& referenceFrameName,
-		     const std::string& childFrameName);
+		     const std::string& childFrameName,
+		     boost::optional<tf::TransformBroadcaster&>
+		     transformBroadcaster);
     virtual ~Tracker();
 
     void callback (const evas_body_segments_t& msg);
@@ -33,6 +37,11 @@ namespace evart
       return objectName_;
     }
 
+    const std::string& childFrameName () const
+    {
+      return childFrameName_;
+    }
+
   private:
     ros::Publisher publisher_;
     uint32_t seq_;
@@ -44,6 +53,7 @@ namespace evart
 
     uint32_t bodyId_;
     uint32_t segmentId_;
+    boost::optional<tf::TransformBroadcaster&> transformBroadcaster_;
   };
 
   typedef boost::shared_ptr<Tracker> TrackerShPtr;

@@ -4,6 +4,7 @@
 #include <boost/format.hpp>
 #include <boost/make_shared.hpp>
 #include <ros/ros.h>
+#include <tf/transform_broadcaster.h>
 
 #include <evart-client.h>
 
@@ -15,15 +16,24 @@ namespace evart
     : nodeHandle_("evart"),
       evartHost_(),
       evartPort_(),
+      enableTfBroadcast_ (),
       tfReferenceFrameName_ (),
       trackSegmentsSrv_ (),
-      listSegmentsSrv_ ()
+      listSegmentsSrv_ (),
+      transformBroadcaster_ (),
+      updateRate_ ()
   {
     ros::param::param<std::string>("~hostname", evartHost_, EVAS_STREAM_HOST);
     ros::param::param<int>("~port", evartPort_, EVAS_STREAM_PORT);
 
+    ros::param::param<bool>
+      ("~enable_tf_broadcast", enableTfBroadcast_, true);
+
     ros::param::param<std::string>
       ("~tf_ref_frame_id", tfReferenceFrameName_, "/mocap_world");
+
+    ros::param::param<double>
+      ("~update_rate", updateRate_, 100.);
 
     evas_sethost(evartHost_.c_str());
     evas_setport(evartPort_);
@@ -40,10 +50,10 @@ namespace evart
     bool (evart_ros::TrackSegment::Request&,
 	  evart_ros::TrackSegment::Response&)> trackSegmentCallback_t;
 
-  trackSegmentCallback_t trackSegmentsCallback =
-    boost::bind(&Evart::trackSegments, this, _1, _2);
-  trackSegmentsSrv_ = nodeHandle_.advertiseService("track_segments",
-						   trackSegmentsCallback);
+    trackSegmentCallback_t trackSegmentsCallback =
+      boost::bind(&Evart::trackSegments, this, _1, _2);
+    trackSegmentsSrv_ = nodeHandle_.advertiseService("track_segments",
+						     trackSegmentsCallback);
 }
 
   Evart::~Evart()
@@ -69,14 +79,38 @@ Evart::trackSegments(evart_ros::TrackSegment::Request& req,
     childFrameName = fmt.str();
   }
 
-  TrackerShPtr ptr (new Tracker
-		    (nodeHandle_,
-		     req.body_name,
-		     req.segment_name,
-		     topicName,
-		     tfReferenceFrameName_,
-		     childFrameName));
-  trackers_.push_back(ptr);
+  BOOST_FOREACH(const TrackerShPtr& tracker, trackers_)
+    if (tracker && tracker->childFrameName () == childFrameName)
+      {
+	ROS_ERROR_STREAM ("tracker for "
+			  << req.segment_name << ":" << req.body_name
+			  << " already exists.");
+	res.succeed = false;
+	return true;
+      }
+  boost::optional<tf::TransformBroadcaster&> broadcaster;
+  if (enableTfBroadcast_)
+    broadcaster = transformBroadcaster_;
+
+  try
+    {
+      TrackerShPtr ptr (new Tracker
+			(nodeHandle_,
+			 req.body_name,
+			 req.segment_name,
+			 topicName,
+			 tfReferenceFrameName_,
+			 childFrameName,
+			 broadcaster));
+      trackers_.push_back(ptr);
+    }
+  catch (std::exception& e)
+    {
+      ROS_ERROR_STREAM (e.what ());
+      res.succeed = false;
+      return true;
+    }
+  res.succeed = true;
   return true;
 }
 
@@ -156,7 +190,7 @@ Evart::spin()
   while (evas_recv (&msg, 0.001))
     {}
 
-  ros::Rate loopRateTracking(100);
+  ros::Rate loopRateTracking(updateRate_);
   while(ros::ok())
     {
       evas_recv (&msg, 0.001);
