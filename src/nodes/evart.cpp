@@ -21,7 +21,8 @@ namespace evart
       trackSegmentsSrv_ (),
       listSegmentsSrv_ (),
       transformBroadcaster_ (),
-      updateRate_ ()
+      updateRate_ (),
+      trackAllSegments_ ()
   {
     ros::param::param<std::string>("~hostname", evartHost_, EVAS_STREAM_HOST);
     ros::param::param<int>("~port", evartPort_, EVAS_STREAM_PORT);
@@ -34,6 +35,9 @@ namespace evart
 
     ros::param::param<double>
       ("~update_rate", updateRate_, 100.);
+
+    ros::param::param<bool>
+      ("~track_all_segments", trackAllSegments_, false);
 
     evas_sethost(evartHost_.c_str());
     evas_setport(evartPort_);
@@ -103,6 +107,10 @@ Evart::trackSegments(evart_bridge::TrackSegment::Request& req,
 			 childFrameName,
 			 broadcaster));
       trackers_.push_back(ptr);
+      ROS_INFO_STREAM("start tracking segment "
+		      << req.body_name
+		      << ":"
+		      << req.segment_name);
     }
   catch (std::exception& e)
     {
@@ -181,6 +189,51 @@ Evart::listSegments(evart_bridge::List::Request& req,
 }
 
 void
+Evart::trackAllSegments()
+{
+  const evas_body_list_t* bodies = evas_body_list();
+  if (!bodies)
+    {
+      ROS_ERROR("failed to retrieve bodies");
+      return;
+    }
+
+  evart_bridge::TrackSegment::Request req;
+  evart_bridge::TrackSegment::Response res;
+
+  for (uint32_t body = 0; body < bodies->nbodies; ++body)
+    {
+      const evas_body_segments_list_t* segments =
+	evas_body_segments_list(body);
+      if (!segments)
+	{
+	  ROS_ERROR_STREAM("failed to retrieve segments for body "
+			   << bodies->bodies[body]);
+	  continue;
+	}
+
+      for(uint32_t segment = 0; segment < segments->nsegments; ++segment)
+	{
+	  try
+	    {
+	      req.body_name = bodies->bodies[body];
+	      req.segment_name = segments->hier[segment].name;
+	      trackSegments(req, res);
+	    }
+	  catch (std::exception& e)
+	    {
+	      ROS_WARN_STREAM("failed to track segment "
+			      << req.body_name
+			      << ":"
+			      << req.segment_name
+			      << "\n"
+			      << e.what());
+	    }
+	}
+    }
+}
+
+void
 Evart::spin()
 {
   // Unpoll as many messages as possible to avoid receiving
@@ -189,6 +242,9 @@ Evart::spin()
   evas_sethandler (0, 0);
   while (evas_recv (&msg, 0.001))
     {}
+
+  if (trackAllSegments_)
+    trackAllSegments();
 
   ros::Rate loopRateTracking(updateRate_);
   while(ros::ok())

@@ -27,6 +27,7 @@ namespace evart
 		       evart_bridge::TrackSegment::Response& res);
     bool listSegments(evart_bridge::List::Request& req,
 		      evart_bridge::List::Response& res);
+    void trackAllSegments();
 
   private:
     ros::NodeHandle nodeHandle_;
@@ -44,6 +45,7 @@ namespace evart
     tf::TransformBroadcaster transformBroadcaster_;
 
     double updateRate_;
+    bool trackAllSegments_;
   };
 
 } // end of namespace evart.
