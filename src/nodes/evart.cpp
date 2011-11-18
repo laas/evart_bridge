@@ -1,3 +1,4 @@
+#include <algorithm>
 #include <stdexcept>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
@@ -74,6 +75,7 @@ Evart::trackSegments(evart_bridge::TrackSegment::Request& req,
     boost::format fmt("%1%/%2%");
     fmt % req.body_name % req.segment_name;
     topicName = fmt.str();
+    std::replace (topicName.begin (), topicName.end (), '-', '_');
   }
 
   std::string childFrameName;
@@ -81,6 +83,7 @@ Evart::trackSegments(evart_bridge::TrackSegment::Request& req,
     boost::format fmt("%1%/%2%/%3%");
     fmt % tfReferenceFrameName_ % req.body_name % req.segment_name;
     childFrameName = fmt.str();
+    std::replace (childFrameName.begin (), childFrameName.end (), '-', '_');
   }
 
   BOOST_FOREACH(const TrackerShPtr& tracker, trackers_)
