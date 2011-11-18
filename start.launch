@@ -1,0 +1,4 @@
+<!-- -*- xml -*- -->
+<launch>
+  <node pkg="evart_bridge" type="evart" name="evart"/>
+</launch>
