@@ -1,5 +1,6 @@
 #include "signal.h"
 
+#include <cstring>
 #include <algorithm>
 #include <stdexcept>
 #include <boost/bind.hpp>
@@ -259,6 +260,7 @@ Evart::spin()
   // Unpoll as many messages as possible to avoid receiving
   // obsolete message kept in the buffer.
   evas_msg_t msg;
+  memset (&msg, 0, sizeof (evas_msg_t));
   evas_sethandler (0, 0);
   while (evas_recv (&msg, 0.001))
     {}
@@ -269,7 +271,12 @@ Evart::spin()
   ros::Rate loopRateTracking(updateRate_);
   while(ros::ok())
     {
-      evas_recv (&msg, 0.001);
+      if (!evas_recv (&msg, 0.001))
+	{
+	  ros::spinOnce();
+	  loopRateTracking.sleep();
+	  continue;
+	}
       if (msg.type == EVAS_BODY_SEGMENTS)
 	{
 	  BOOST_FOREACH (TrackerShPtr tracker, trackers_)
