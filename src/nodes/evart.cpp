@@ -269,9 +269,9 @@ Evart::spin()
     trackAllSegments();
 
   ros::Rate loopRateTracking(updateRate_);
-  while(ros::ok())
+  while (ros::ok ())
     {
-      while (evas_recv (&msg, 0.001))
+      while (evas_recv (&msg, 0.001) && ros::ok ())
 	{
 	  if (msg.type == EVAS_BODY_SEGMENTS)
 	    {
@@ -283,6 +283,7 @@ Evart::spin()
 	    }
 	  ros::spinOnce();
 	}
+      ros::spinOnce();
       loopRateTracking.sleep();
     }
 }
