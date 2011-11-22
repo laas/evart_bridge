@@ -1,9 +1,12 @@
+#include "signal.h"
+
 #include <algorithm>
 #include <stdexcept>
 #include <boost/bind.hpp>
 #include <boost/foreach.hpp>
 #include <boost/format.hpp>
 #include <boost/make_shared.hpp>
+#include <boost/scope_exit.hpp>
 #include <ros/ros.h>
 #include <tf/transform_broadcaster.h>
 
@@ -13,6 +16,20 @@
 
 namespace evart
 {
+  class Evart;
+
+  Evart* evart_instance = 0;
+
+  void sigintHandler(int)
+  {
+    if (evart_instance)
+      {
+	delete evart_instance;
+	evart_instance = 0;
+      }
+    ros::requestShutdown();
+  }
+
   Evart::Evart()
     : nodeHandle_("evart"),
       evartHost_(),
@@ -271,12 +288,20 @@ Evart::spin()
 
 int main(int argc, char **argv)
 {
-  ros::init(argc, argv, "evart");
+  BOOST_SCOPE_EXIT ()
+    {
+      delete evart::evart_instance;
+      evart::evart_instance = 0;
+    }
+  BOOST_SCOPE_EXIT_END;
+
+  ros::init(argc, argv, "evart", ros::init_options::NoSigintHandler);
   try
     {
-      evart::Evart evart;
-      if (ros::ok())
-	evart.spin();
+      signal (SIGINT, evart::sigintHandler);
+      evart::evart_instance = new evart::Evart ();
+      if (ros::ok() && evart::evart_instance)
+	evart::evart_instance->spin();
     }
   catch(std::exception& e)
     {
