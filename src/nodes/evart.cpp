@@ -271,21 +271,18 @@ Evart::spin()
   ros::Rate loopRateTracking(updateRate_);
   while(ros::ok())
     {
-      if (!evas_recv (&msg, 0.001))
+      while (evas_recv (&msg, 0.001))
 	{
+	  if (msg.type == EVAS_BODY_SEGMENTS)
+	    {
+	      BOOST_FOREACH (TrackerShPtr tracker, trackers_)
+		for (unsigned i = 0; i < msg.body_segments.nsegments; ++i)
+		  if (tracker->bodyId () == msg.body_segments.index
+		      && tracker->segmentId () == i)
+		    tracker->callback (msg.body_segments);
+	    }
 	  ros::spinOnce();
-	  loopRateTracking.sleep();
-	  continue;
 	}
-      if (msg.type == EVAS_BODY_SEGMENTS)
-	{
-	  BOOST_FOREACH (TrackerShPtr tracker, trackers_)
-	    for (unsigned i = 0; i < msg.body_segments.nsegments; ++i)
-	      if (tracker->bodyId () == msg.body_segments.index
-		  && tracker->segmentId () == i)
-		tracker->callback (msg.body_segments);
-	}
-      ros::spinOnce();
       loopRateTracking.sleep();
     }
 }
