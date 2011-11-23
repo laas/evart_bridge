@@ -55,18 +55,6 @@ def computeTransformation(world, mocap_world, frame_world, frame_mocap):
 
     rbMwm = np.linalg.inv(wmMrb)
     wMwm = wMrb * rbMwm
-    rospy.loginfo("xxx: {0}".format(wmMrb))
-    rospy.loginfo("xxx: {0}".format(rbMwm))
-    rospy.loginfo("xxx: {0}".format(wMrb))
-    rospy.loginfo("xxx: {0}".format(wMwm))
-
-#    wMwm = np.matrix(
-#[[  -0.86506,  -0.26088,   0.42850,   1.82854],
-# [  0.26646,  -0.96264,  -0.04814,  -0.50408],
-# [  0.42505,   0.07254,   0.90226,  -0.09585],
-# [  0.00000,   0.00000,   0.00000,   1.00000]]
-#        )
-
     trans = translation_from_matrix(wMwm)
     rot = quaternion_from_matrix(wMwm)
     rospy.loginfo("Mocap world to world tf computed: {0} {1}\n{2}".format(trans, rot, wMwm))
