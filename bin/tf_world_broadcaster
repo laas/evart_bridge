@@ -53,8 +53,8 @@ def computeTransformation(world, mocap_world, frame_world, frame_mocap):
     wMrb = np.matrix(transformer.fromTranslationRotation(transW, rotW))
     rospy.loginfo("wMrb: {0} {1}\n{2}".format(transW, rotW, wMrb))
 
-    rbMwm = np.linalg.inv(wmMrb)
-    wMwm = wMrb * rbMwm
+    rbMwm = np.matrix(np.linalg.inv(wmMrb))
+    wMwm = np.matrix(np.linalg.inv(wMrb * rbMwm))
     trans = translation_from_matrix(wMwm)
     rot = quaternion_from_matrix(wMwm)
     rospy.loginfo("Mocap world to world tf computed: {0} {1}\n{2}".format(trans, rot, wMwm))
