@@ -1,0 +1,145 @@
+#!/usr/bin/env python
+#
+# This node provides a way to define a world frame w.r.t. to a
+# reference position.
+#
+# Considering that a frame position is available both:
+# - w.r.t. to the world frame (control)
+# - w.r.t. to the motion capture frame (mocap world)
+#
+# It is possible to compute the base link position in the mocap world.
+# This allows localization and drift evaluation by comparing the two
+# world frames. The fixed one (map / mocap world) and the drifting one
+# (world, the control world frame).
+#
+#
+# In the tf frame:
+#
+# map = mocap world
+#  base link
+#   ref body
+#
+# world
+#  base link
+
+import sys
+import numpy as np
+
+import roslib
+roslib.load_manifest('evart_bridge')
+import rospy
+
+import tf
+from tf.transformations import translation_from_matrix, quaternion_from_matrix
+import geometry_msgs.msg
+import evart_bridge.srv
+
+trans = None
+rot = None
+listener = None
+transformer = None
+
+def computeTransformation(map_frame_id,
+                          mocap_world_frame_id,
+                          base_link_frame_id,
+                          reference_body_world_frame_id,
+                          reference_body_mocap_frame_id):
+    t = rospy.Time()
+
+    # Retrieve the frame w.r.t. to the mocap world.
+    #
+    # mocapMrb -> reference body position w.r.t. the motion capture
+    # world
+    #
+    # rbMbl -> base link position w.r.t. the reference body.
+
+    # Retrieve body position w.r.t. mocap world.
+    (mocapMrb_t, mocapMrb_q) = \
+        listener.lookupTransform(mocap_world_frame_id,
+                                 reference_body_mocap_frame_id, t)
+    mocapMrb = np.matrix(
+        transformer.fromTranslationRotation(mocapMrb_t, mocapMrb_q))
+    rospy.loginfo(
+        "mocapMrb: {0} {1}\n{2}".format(mocapMrb_t, mocapMrb_q, mocapMrb))
+
+    # Retrieve base link position w.r.t. reference body.
+    (rbMbl_t, rbMbl_q) = \
+        listener.lookupTransform(base_link_frame_id,
+                                 reference_body_world_frame_id, t)
+    rbMbl = np.matrix(transformer.fromTranslationRotation(rbMbl_t, rbMbl_q))
+    rospy.loginfo("rbMbl: {0} {1}\n{2}".format(rbMbl_t, rbMbl_q, rbMbl))
+
+    # Compute the base_link position w.r.t. the map world.
+    mapMbl = mapMrb * rbMbl
+
+
+    mapMbl_t = translation_from_matrix(mapMbl)
+    mapMbl_q = quaternion_from_matrix(mapMbl)
+    rospy.loginfo("Map position computed: {0} {1}\n{2}".format
+                  (mapMbl_t, mapMbl_q, mapMbl))
+    return (mapMbl_t, mapMbl_q)
+
+if __name__ == '__main__':
+    rospy.init_node('tf_world_broadcaster')
+    listener = tf.TransformListener()
+    transformer = tf.TransformerROS()
+
+    # Parameters
+    base_link_frame_id = rospy.get_param('~base_link_frame_id', 'base_link')
+    mocap_world_frame_id = \
+        rospy.get_param('~mocap_world_frame_id', 'mocap_world')
+    map_frame_id = rospy.get_param('~map_frame_id', 'map')
+
+    reference_body_world_frame_id = rospy.get_param(
+        '~reference_body_world_frame_id')
+    reference_body_mocap_frame_id = rospy.get_param(
+        '~reference_body_mocap_frame_id')
+
+    rospy.loginfo("base link frame id: {0}".format(base_link_frame_id))
+    rospy.logdebug(
+        "motion capture world frame: {0}".format(mocap_world_frame_id))
+    rospy.loginfo("map frame id: {0}".format(map_frame_id))
+    rospy.logdebug("reference body w.r.t the world frame: {0}".format(
+            reference_body_world_frame_id))
+    rospy.logdebug(
+        "reference body w.r.t the motion capture world frame: {0}".format(
+            reference_body_mocap_frame_id))
+
+    # First transformation evaluation (blocking, unlike the service)
+    t = rospy.Time(0)
+    ok = False
+    rospy.loginfo("Waiting for frames...")
+    rate = rospy.Rate(10.0)
+    while not ok and not rospy.is_shutdown():
+        try:
+            listener.waitForTransform(
+                reference_body_mocap_frame_id, mocap_world_frame_id,
+                t, rospy.Duration(0.1))
+            listener.waitForTransform(
+                base_link_frame_id, reference_body_world_frame_id,
+                t, rospy.Duration(0.1))
+            ok = True
+        except tf.Exception as e:
+            rospy.logdebug("error while waiting for frames: {0}".format(e))
+            ok = False
+            rate.sleep()
+    if rospy.is_shutdown():
+        sys.exit(0)
+    tfPub = tf.TransformBroadcaster()
+    rate = rospy.Rate(200)
+    while not rospy.is_shutdown():
+        try:
+            (trans, rot) = computeTransformation(
+                map_frame_id,
+                mocap_world_frame_id,
+                base_link_frame_id,
+                reference_body_world_frame_id,
+                reference_body_mocap_frame_id)
+            if trans != None and rot != None:
+                tfPub.sendTransform(
+                    trans, rot, rospy.Time.now(),
+                    base_link_frame_id,
+                    map_frame_id)
+        except:
+            pass
+        rate.sleep()
