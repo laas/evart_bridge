@@ -115,7 +115,7 @@ namespace evart
     // WARNING: this makes the assumption that the rotation order is
     // the default one (i.e. XYX) in Cortex. If you change the
     // rotation order, this will not work.
-    btQuaternion q;
+    tf::Quaternion q;
     q.setRPY(msg.segments[segmentId_].rot[0] * M_PI / 180.,
 	     msg.segments[segmentId_].rot[1] * M_PI / 180.,
 	     msg.segments[segmentId_].rot[2] * M_PI / 180.);
